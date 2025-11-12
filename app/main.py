@@ -7,6 +7,11 @@ from contextlib import asynccontextmanager
 from app.config import get_settings
 from app.api.v1.router import api_router
 from app.core.logging import setup_logging, logger
+from app.core.job_manager import job_manager
+from app.core.worker import start_workers, stop_workers
+
+# Import handlers to register them
+import app.handlers  # noqa: F401
 
 settings = get_settings()
 
@@ -17,9 +22,18 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
+
+    # Start background workers
+    worker_count = 3  # Number of concurrent workers
+    workers = await start_workers(worker_count, job_manager)
+    logger.info(f"Started {worker_count} background workers")
+
     yield
+
     # Shutdown
     logger.info(f"Shutting down {settings.app_name}")
+    await stop_workers(workers)
+    logger.info("All background workers stopped")
 
 
 def create_application() -> FastAPI:

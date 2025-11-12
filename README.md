@@ -17,6 +17,9 @@ A production-ready FastAPI application with best practices, structured architect
 - ✅ **Example CRUD Endpoints** - Items and Users resources
 - ✅ **Input Validation** - Automatic request/response validation
 - ✅ **Interactive API Docs** - Auto-generated Swagger UI and ReDoc
+- ✅ **Asynchronous Job Queue** - Background job processing with intermediate results
+- ✅ **Dynamic Handler Registry** - Pluggable job handlers for different task types
+- ✅ **Job Status Tracking** - RESTful job status polling with Location headers
 
 ## Project Structure
 
@@ -34,11 +37,21 @@ fastapi/
 │   │       └── endpoints/
 │   │           ├── __init__.py
 │   │           ├── items.py # Items CRUD endpoints
-│   │           └── users.py # Users CRUD endpoints
-│   └── core/
+│   │           ├── users.py # Users CRUD endpoints
+│   │           └── jobs.py  # Job queue endpoints
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── logging.py       # Logging configuration
+│   │   ├── middleware.py    # Custom middleware
+│   │   ├── handlers.py      # Job handler registry
+│   │   ├── job_manager.py   # Job queue manager
+│   │   └── worker.py        # Background workers
+│   ├── handlers/            # Job handler implementations
+│   │   ├── __init__.py
+│   │   └── example.py       # Example job handlers
+│   └── schemas/             # Pydantic schemas
 │       ├── __init__.py
-│       ├── logging.py       # Logging configuration
-│       └── middleware.py    # Custom middleware
+│       └── job.py           # Job-related schemas
 ├── logs/                    # Application logs (created at runtime)
 ├── venv/                    # Virtual environment
 ├── .env                     # Environment variables (not in repo)
@@ -47,6 +60,7 @@ fastapi/
 ├── .dockerignore           # Docker ignore rules
 ├── Dockerfile              # Production Docker image
 ├── docker-compose.yml      # Docker compose configuration
+├── Makefile                # Build and run commands
 ├── requirements.txt        # Python dependencies
 └── README.md              # This file
 ```
@@ -194,6 +208,168 @@ Once the application is running, you can access:
 - `POST /api/v1/users` - Create new user
 - `PUT /api/v1/users/{user_id}` - Update user
 - `DELETE /api/v1/users/{user_id}` - Delete user
+
+### Jobs API (`/api/v1/jobs`)
+
+- `POST /api/v1/jobs` - Submit a new job (returns 202 with Location header)
+- `GET /api/v1/jobs/{job_id}` - Get job status, intermediate results, and final result
+- `GET /api/v1/jobs` - Get queue information and available job types
+
+## Asynchronous Job Queue System
+
+The application includes a production-ready asynchronous job queue system for background task processing.
+
+### Key Features
+
+- **In-memory queue** with asyncio for high performance
+- **Background workers** running in the same process (3 workers by default)
+- **Intermediate results** - handlers can publish progress updates during execution
+- **Dynamic handler registry** - easily add new job types with a decorator
+- **RESTful status tracking** - poll job status via GET endpoint
+- **Location header** - job submission returns URL for status polling
+
+### Built-in Job Types
+
+- `data_processing` - Multi-step data processing with progress tracking
+- `echo` - Simple echo handler for testing
+- `long_running` - Simulates long-running jobs with multiple stages
+
+### Job Lifecycle
+
+1. **Submit** - POST to `/api/v1/jobs` with job type and payload
+2. **Queue** - Job is stored in memory and added to queue
+3. **Process** - Background worker picks up job and executes handler
+4. **Track** - Poll status endpoint to see progress and intermediate results
+5. **Complete** - Job finishes with final result or error
+
+### Example Job Submission
+
+Submit a job and get back a Location header:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "data_processing",
+    "payload": {
+      "items": ["apple", "banana", "cherry"],
+      "delay": 0.5
+    }
+  }' -i
+```
+
+Response:
+```
+HTTP/1.1 202 Accepted
+Location: http://localhost:8000/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "data_processing",
+  "status": "pending",
+  "created_at": "2024-01-15T10:30:00",
+  "started_at": null,
+  "completed_at": null,
+  "intermediate_results": [],
+  "final_result": null,
+  "error": null
+}
+```
+
+### Polling Job Status
+
+Use the Location URL or construct the status endpoint:
+
+```bash
+curl "http://localhost:8000/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Response while running:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "data_processing",
+  "status": "running",
+  "created_at": "2024-01-15T10:30:00",
+  "started_at": "2024-01-15T10:30:01",
+  "completed_at": null,
+  "intermediate_results": [
+    {
+      "timestamp": "2024-01-15T10:30:01",
+      "data": {"step": "validation", "status": "completed", "valid_items": 3}
+    },
+    {
+      "timestamp": "2024-01-15T10:30:02",
+      "data": {"step": "processing", "progress": "1/3", "current_item": "APPLE"}
+    }
+  ],
+  "final_result": null,
+  "error": null
+}
+```
+
+Response when complete:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "data_processing",
+  "status": "completed",
+  "created_at": "2024-01-15T10:30:00",
+  "started_at": "2024-01-15T10:30:01",
+  "completed_at": "2024-01-15T10:30:05",
+  "intermediate_results": [...],
+  "final_result": {
+    "status": "success",
+    "total_processed": 3,
+    "items": ["APPLE", "BANANA", "CHERRY"],
+    "message": "All items processed successfully"
+  },
+  "error": null
+}
+```
+
+### Creating Custom Job Handlers
+
+Add new job types by creating handlers in `app/handlers/`:
+
+```python
+# app/handlers/my_handler.py
+from app.core.handlers import register_handler, JobContext
+from typing import Any
+
+@register_handler("my_custom_job")
+async def my_custom_handler(payload: dict[str, Any], context: JobContext) -> dict:
+    """Your custom job handler."""
+
+    # Access payload data
+    data = payload.get("data")
+
+    # Add intermediate results
+    context.add_result({"status": "started", "message": "Processing..."})
+
+    # Do your processing
+    result = process_data(data)
+
+    # Add more intermediate results
+    context.add_result({"status": "halfway", "partial": result})
+
+    # Return final result
+    return {
+        "status": "success",
+        "result": result
+    }
+```
+
+Then import it in `app/handlers/__init__.py`:
+
+```python
+from app.handlers import example, my_handler
+
+__all__ = ["example", "my_handler"]
+```
+
+Now you can submit jobs with `"type": "my_custom_job"`!
 
 ## Example Requests
 
