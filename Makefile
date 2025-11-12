@@ -2,31 +2,30 @@
 
 help:
 	@echo "Available commands:"
-	@echo "  make dev      - Run the API in development mode with hot reload"
-	@echo "  make debug    - Run the API in debug mode with verbose logging"
-	@echo "  make prod     - Run the API in production mode"
+	@echo "  make dev      - Run in development mode (uses .env settings)"
+	@echo "  make debug    - Run in debug mode (DEBUG=true, verbose logging)"
+	@echo "  make prod     - Run in production mode (uses .env settings)"
 	@echo "  make install  - Install dependencies"
 	@echo "  make clean    - Clean up cache and temporary files"
 	@echo "  make lint     - Run code linting"
 	@echo "  make format   - Format code"
 	@echo "  make test     - Run tests"
+	@echo ""
+	@echo "Configuration: Edit .env file to change settings"
+	@echo "All commands use run.py which reads from .env"
 
 dev:
-	@echo "Starting FastAPI in development mode with hot reload..."
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	@echo "Starting in development mode (reading from .env)..."
+	@python run.py
 
 debug:
-	@echo "Starting FastAPI in DEBUG mode..."
-	@echo "Debug features enabled:"
-	@echo "  - Verbose logging"
-	@echo "  - Hot reload"
-	@echo "  - Detailed error traces"
-	@echo "  - Uvicorn access logs"
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug --access-log
+	@echo "Starting in DEBUG mode with verbose logging..."
+	@echo "Temporarily setting DEBUG=true and LOG_LEVEL=debug"
+	@DEBUG=true LOG_LEVEL=debug python run.py
 
 prod:
-	@echo "Starting FastAPI in production mode..."
-	uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+	@echo "Starting in production mode (reading from .env)..."
+	@python run.py
 
 install:
 	@echo "Installing dependencies..."

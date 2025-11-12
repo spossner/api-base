@@ -24,9 +24,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"Debug mode: {settings.debug}")
 
     # Start background workers
-    worker_count = 3  # Number of concurrent workers
-    workers = await start_workers(worker_count, job_manager)
-    logger.info(f"Started {worker_count} background workers")
+    workers = await start_workers(settings.job_workers, job_manager)
+    logger.info(f"Started {settings.job_workers} background workers")
 
     yield
 

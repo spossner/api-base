@@ -19,11 +19,14 @@ class Settings(BaseSettings):
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
 
-    # Server
+    # Server (Uvicorn configuration)
     host: str = "0.0.0.0"
     port: int = 8000
-    workers: int = 4
     reload: bool = False
+    server_workers: int = 4  # Uvicorn process workers (use 1 with reload=true)
+
+    # Job Queue
+    job_workers: int = 10  # Background async job queue workers
 
     # Logging
     log_level: str = "INFO"
