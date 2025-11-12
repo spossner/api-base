@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+
+# Virtual environments
+venv/
+
+# Distribution / packaging
+.Python
+build/
+dist/
+
+# Unit test / coverage reports
+.pytest_cache/
+
+# Logs
+logs/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
