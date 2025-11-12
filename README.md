@@ -98,7 +98,36 @@ cp .env.example .env
 
 ## Running the Application
 
-### Development Mode
+### Quick Start with Makefile (Recommended)
+
+The easiest way to run the application is using the included Makefile:
+
+```bash
+# Make sure virtual environment is activated
+source venv/Scripts/activate  # or appropriate command for your shell
+
+# View all available commands
+make help
+
+# Run in development mode with hot reload
+make dev
+
+# Run in DEBUG mode with verbose logging and detailed traces
+make debug
+
+# Run in production mode
+make prod
+
+# Install dependencies
+make install
+
+# Clean up cache files
+make clean
+```
+
+### Manual Commands
+
+#### Development Mode
 
 ```bash
 # Make sure virtual environment is activated
@@ -108,7 +137,14 @@ source venv/Scripts/activate  # or appropriate command for your shell
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Production Mode
+#### Debug Mode
+
+```bash
+# Run with debug logging and verbose output
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug --access-log
+```
+
+#### Production Mode
 
 ```bash
 # Run with multiple workers (recommended for production)
