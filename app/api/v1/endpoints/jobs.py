@@ -4,9 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.core.handlers import list_handlers
-from app.core.job_manager import job_manager
-from app.schemas.job import JobCreate, JobResponse
+from app.jobs import JobCreate, JobResponse, job_manager, list_handlers
 
 logger = logging.getLogger(__name__)
 

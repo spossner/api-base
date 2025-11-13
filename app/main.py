@@ -7,11 +7,11 @@ from contextlib import asynccontextmanager
 from app.config import get_settings
 from app.api.v1.router import api_router
 from app.core.logging import setup_logging, logger
-from app.core.job_manager import job_manager
-from app.core.worker import start_workers, stop_workers
+from app.jobs import job_manager, start_workers, stop_workers
 
 # Import handlers to register them
-import app.handlers  # noqa: F401
+import app.handlers
+from app.middleware.request_logging import RequestLoggingMiddleware  # noqa: F401
 
 settings = get_settings()
 
@@ -50,6 +50,10 @@ def create_application() -> FastAPI:
     )
 
     # Middleware
+    app.add_middleware(
+        RequestLoggingMiddleware
+    )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

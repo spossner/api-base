@@ -4,9 +4,9 @@ import asyncio
 import logging
 from typing import Any
 
-from app.core.handlers import JobContext, get_handler
-from app.core.job_manager import JobManager
-from app.schemas.job import JobStatus
+from app.jobs.handlers import JobContext, get_handler
+from app.jobs.manager import JobManager
+from app.jobs.schemas import JobStatus
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
-from app.core.handlers import JobContext, register_handler
+from app.jobs import JobContext, register_handler
 
 logger = logging.getLogger(__name__)
 

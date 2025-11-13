@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from app.schemas.job import IntermediateResult, JobResponse, JobStatus
+from app.jobs.schemas import IntermediateResult, JobResponse, JobStatus
 
 logger = logging.getLogger(__name__)
 
