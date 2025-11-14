@@ -132,6 +132,13 @@ All job queue components are organized in `app/jobs/` for better separation of c
 
 The job system uses **Pydantic models** for type-safe request validation. Each handler is self-contained in its own module with both the request schema and handler function.
 
+**Validation Features:**
+- ✅ **Required fields** - Pydantic enforces all required fields
+- ✅ **Type validation** - Automatic type checking with reasonable coercion
+- ✅ **Field constraints** - Min/max values, regex patterns, etc.
+- ✅ **No extra fields** - Rejects unexpected parameters (`extra="forbid"`)
+- ✅ **Clear error messages** - Detailed validation errors returned to client
+
 #### Structure
 
 Create a new file `app/handlers/my_handler.py`:

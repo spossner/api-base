@@ -20,6 +20,11 @@ class JobStatus(str, Enum):
 class BaseJobRequest(BaseModel):
     """Base class for all job request types."""
 
+    model_config = {
+        "extra": "forbid",  # Reject unexpected fields
+        "validate_assignment": True,  # Validate when fields are assigned
+    }
+
     type: str = Field(..., description="The type of job to execute")
 
 
