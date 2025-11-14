@@ -24,4 +24,3 @@ class JobContext:
             data: The intermediate result data to add
         """
         self._job_manager.add_intermediate_result(self.job_id, data)
-        logger.info(f"Job {self.job_id}: Added intermediate result")
