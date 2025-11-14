@@ -59,29 +59,57 @@ class JobManager:
         """Initialize the job manager."""
         self._jobs: dict[str, Job] = {}
         self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._idempotency_keys: dict[str, str] = {}  # idempotency_key -> job_id
         logger.info("Job manager initialized")
 
-    async def submit_job(self, job_type: str, payload: dict[str, Any]) -> str:
+    async def submit_job(
+        self, job_type: str, payload: dict[str, Any], idempotency_key: str | None = None
+    ) -> tuple[str, bool]:
         """Submit a new job to the queue.
 
         Args:
             job_type: The type of job to execute
             payload: Job-specific data
+            idempotency_key: Optional key to prevent duplicate submissions
 
         Returns:
-            The unique job ID
+            Tuple of (job_id, is_new) where is_new indicates if this is a new job
         """
+        # Check idempotency key if provided
+        if idempotency_key:
+            existing_job_id = self._idempotency_keys.get(idempotency_key)
+            if existing_job_id:
+                existing_job = self._jobs.get(existing_job_id)
+                if existing_job:
+                    # Job still exists, return existing job
+                    logger.info(
+                        f"Idempotent request: returning existing job {existing_job_id} "
+                        f"(key: {idempotency_key})"
+                    )
+                    return existing_job_id, False
+                else:
+                    # Job was cleaned up, remove stale idempotency key
+                    del self._idempotency_keys[idempotency_key]
+
+        # Create new job
         job_id = create_id()
         job = Job(job_id, job_type, payload)
 
         # Store in memory
         self._jobs[job_id] = job
 
+        # Store idempotency key mapping
+        if idempotency_key:
+            self._idempotency_keys[idempotency_key] = job_id
+
         # Add to queue
         await self._queue.put(job_id)
 
-        logger.info(f"Job submitted: {job_id} (type: {job_type})")
-        return job_id
+        logger.info(
+            f"Job submitted: {job_id} (type: {job_type})"
+            + (f" (idempotency_key: {idempotency_key})" if idempotency_key else "")
+        )
+        return job_id, True
 
     def get_job(self, job_id: str) -> Job | None:
         """Get a job by ID.
@@ -206,9 +234,17 @@ class JobManager:
             if job.completed_at and job.completed_at < cutoff_time:
                 jobs_to_remove.append(job_id)
 
-        # Remove old jobs
+        # Remove old jobs and their idempotency keys
         for job_id in jobs_to_remove:
             del self._jobs[job_id]
+
+            # Remove associated idempotency key
+            keys_to_remove = [
+                key for key, jid in self._idempotency_keys.items() if jid == job_id
+            ]
+            for key in keys_to_remove:
+                del self._idempotency_keys[key]
+
             logger.debug(f"Cleaned up old job: {job_id}")
 
         if jobs_to_remove:

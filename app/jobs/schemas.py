@@ -26,6 +26,11 @@ class BaseJobRequest(BaseModel):
     }
 
     type: str = Field(..., description="The type of job to execute")
+    idempotency_key: str | None = Field(
+        default=None,
+        description="Optional idempotency key to prevent duplicate job submissions",
+        max_length=255,
+    )
 
 
 class IntermediateResult(BaseModel):

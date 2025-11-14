@@ -107,6 +107,42 @@ Background cleanup task runs periodically and removes:
 
 **Note:** Clients should poll job results within the retention window. After cleanup, job results are no longer available.
 
+#### Idempotency
+
+Prevent duplicate job submissions using idempotency keys:
+
+**Two ways to provide idempotency key:**
+
+1. **Via Header** (recommended, industry standard):
+   ```bash
+   curl -X POST "http://localhost:8000/api/v1/jobs" \
+     -H "Content-Type: application/json" \
+     -H "Idempotency-Key: unique-client-id-12345" \
+     -d '{"type": "echo", "message": "test"}'
+   ```
+
+2. **Via Request Field**:
+   ```bash
+   curl -X POST "http://localhost:8000/api/v1/jobs" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "type": "echo",
+       "message": "test",
+       "idempotency_key": "unique-client-id-12345"
+     }'
+   ```
+
+**Behavior:**
+- Same key within retention period → Returns existing job (202 response with `X-Idempotent-Replay: true` header)
+- Different key or no key → Creates new job
+- Key after job cleanup → Creates new job (old key is forgotten)
+- Header takes precedence if both provided
+
+**Use cases:**
+- Network retries (prevent duplicate job creation)
+- Client-side idempotency (same user action multiple times)
+- Distributed systems (multiple servers submitting same request)
+
 ### API Structure
 
 - API versioning: all endpoints under `/api/v1/` prefix
