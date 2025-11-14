@@ -94,6 +94,9 @@ async def start_workers(
     Returns:
         List of worker tasks
     """
+    if worker_count == 0:
+        return None
+
     logger.info(f"Starting {worker_count} workers")
 
     workers = []

@@ -18,7 +18,6 @@ importlib.import_module("app.handlers")
 
 settings = get_settings()
 
-
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Application lifespan events."""
@@ -26,25 +25,15 @@ async def lifespan(_: FastAPI):
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
 
-    workers = None
-    cleanup_task = None
+    # Start background workers
+    workers = await start_workers(settings.job_workers, job_manager)
 
-    if settings.job_workers > 0:
-        handlers = list_handlers()
-        if len(handlers) == 0:
-            logger.info("no registered handlers")
-        else:
-            logger.info(f"Registered handlers: {handlers}")
-
-            # Start background workers
-            workers = await start_workers(settings.job_workers, job_manager)
-
-            # Start cleanup task
-            cleanup_task = await start_cleanup_task(
-                job_manager,
-                settings.job_retention_seconds,
-                settings.job_cleanup_interval_seconds,
-            )
+    # Start cleanup task
+    cleanup_task = await start_cleanup_task(
+        job_manager,
+        settings.job_retention_seconds,
+        settings.job_cleanup_interval_seconds,
+    )
 
     yield
 
