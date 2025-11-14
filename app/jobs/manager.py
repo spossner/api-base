@@ -2,10 +2,10 @@
 
 import asyncio
 import logging
-import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
+from app.core.utils import create_id
 from app.jobs.schemas import IntermediateResult, JobResponse, JobStatus
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Job:
     """Internal job representation."""
 
-    def __init__(self, job_id: str, job_type: str, payload: dict[str, Any]):
+    def __init__(self, job_id: str, job_type: str, payload: dict[str, Any]) -> None:
         """Initialize a job.
 
         Args:
@@ -27,11 +27,11 @@ class Job:
         self.payload = payload
         self.status = JobStatus.PENDING
         self.created_at = datetime.now()
-        self.started_at: Optional[datetime] = None
-        self.completed_at: Optional[datetime] = None
+        self.started_at: datetime | None = None
+        self.completed_at: datetime | None = None
         self.intermediate_results: list[IntermediateResult] = []
-        self.final_result: Optional[Any] = None
-        self.error: Optional[str] = None
+        self.final_result: Any | None = None
+        self.error: str | None = None
 
     def to_response(self) -> JobResponse:
         """Convert to response schema.
@@ -55,10 +55,10 @@ class Job:
 class JobManager:
     """Manages job queue and storage."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the job manager."""
         self._jobs: dict[str, Job] = {}
-        self._queue: asyncio.Queue = asyncio.Queue()
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
         logger.info("Job manager initialized")
 
     async def submit_job(self, job_type: str, payload: dict[str, Any]) -> str:
@@ -71,7 +71,7 @@ class JobManager:
         Returns:
             The unique job ID
         """
-        job_id = str(uuid.uuid4())
+        job_id = create_id()
         job = Job(job_id, job_type, payload)
 
         # Store in memory
@@ -83,7 +83,7 @@ class JobManager:
         logger.info(f"Job submitted: {job_id} (type: {job_type})")
         return job_id
 
-    def get_job(self, job_id: str) -> Optional[Job]:
+    def get_job(self, job_id: str) -> Job | None:
         """Get a job by ID.
 
         Args:
@@ -92,9 +92,9 @@ class JobManager:
         Returns:
             The Job object or None if not found
         """
-        return self._jobs.get(job_id)
+        return self._jobs.get(job_id, None)
 
-    def get_job_response(self, job_id: str) -> Optional[JobResponse]:
+    def get_job_response(self, job_id: str) -> JobResponse | None:
         """Get a job response by ID.
 
         Args:
@@ -165,10 +165,7 @@ class JobManager:
         """
         job = self._jobs.get(job_id)
         if job:
-            intermediate = IntermediateResult(
-                timestamp=datetime.now(),
-                data=data
-            )
+            intermediate = IntermediateResult(timestamp=datetime.now(), data=data)
             job.intermediate_results.append(intermediate)
             logger.debug(f"Job {job_id}: Intermediate result added")
 

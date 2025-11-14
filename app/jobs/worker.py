@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from typing import Any
 
 from app.jobs.handlers import JobContext, get_handler
 from app.jobs.manager import JobManager
@@ -48,7 +47,7 @@ async def process_job(job_manager: JobManager, job_id: str) -> None:
 
     except Exception as e:
         # Handle errors
-        error_msg = f"{type(e).__name__}: {str(e)}"
+        error_msg = f"{type(e).__name__}: {e!s}"
         job_manager.set_job_error(job_id, error_msg)
         job_manager.update_job_status(job_id, JobStatus.FAILED)
 

@@ -1,13 +1,10 @@
 """Job handler registry and execution context."""
 
 import logging
-from datetime import datetime
-from typing import Any, Callable, Protocol
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
-
-# Global handler registry
-HANDLERS: dict[str, Callable] = {}
 
 
 class JobContext:
@@ -33,20 +30,10 @@ class JobContext:
         logger.info(f"Job {self.job_id}: Added intermediate result")
 
 
-class JobHandler(Protocol):
-    """Protocol for job handlers."""
+JobHandler = Callable[[JobContext, dict], Any]
 
-    async def __call__(self, payload: dict[str, Any], context: JobContext) -> Any:
-        """Execute the job handler.
-
-        Args:
-            payload: Job-specific data
-            context: Job context for updating intermediate results
-
-        Returns:
-            Final result data
-        """
-        ...
+# Global handler registry
+_handlers: dict[str, JobHandler] = {}
 
 
 def register_handler(job_type: str) -> Callable:
@@ -67,12 +54,26 @@ def register_handler(job_type: str) -> Callable:
             return {"sent": True, "message_id": "123"}
     """
 
+    print(f"registering handler for {job_type}")
+
     def decorator(func: Callable) -> Callable:
-        HANDLERS[job_type] = func
+        _handlers[job_type] = func
         logger.info(f"Registered handler for job type: {job_type}")
         return func
 
     return decorator
+
+
+def can_handle(job_type: str) -> bool:
+    """Check if job type can be handled.
+    Args:
+        job_type: The job type identifier
+
+    Returns:
+        True if the job type can be handled; false otherwise
+    """
+    print(_handlers)
+    return job_type in _handlers
 
 
 def get_handler(job_type: str) -> Callable | None:
@@ -84,7 +85,7 @@ def get_handler(job_type: str) -> Callable | None:
     Returns:
         The handler function or None if not found
     """
-    return HANDLERS.get(job_type)
+    return _handlers.get(job_type)
 
 
 def list_handlers() -> list[str]:
@@ -93,4 +94,4 @@ def list_handlers() -> list[str]:
     Returns:
         List of registered job type names
     """
-    return list(HANDLERS.keys())
+    return list(_handlers.keys())

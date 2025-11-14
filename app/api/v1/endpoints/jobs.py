@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app.jobs import JobCreate, JobResponse, job_manager, list_handlers
+from app.jobs.handlers import can_handle
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +28,10 @@ async def submit_job(job_request: JobCreate, request: Request, response: Respons
         HTTPException: If job type is not registered
     """
     # Validate that handler exists for this job type
-    available_handlers = list_handlers()
-    if job_request.type not in available_handlers:
+    if not can_handle(job_request.type):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown job type: {job_request.type}. Available types: {', '.join(available_handlers)}"
+            detail=f"Unknown job type: {job_request.type}.",
         )
 
     # Submit job
@@ -41,12 +41,11 @@ async def submit_job(job_request: JobCreate, request: Request, response: Respons
     job_response = job_manager.get_job_response(job_id)
     if not job_response:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create job"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create job"
         )
 
     # Set Location header pointing to the status endpoint
-    base_url = str(request.base_url).rstrip('/')
+    base_url = str(request.base_url).rstrip("/")
     location = f"{base_url}/api/v1/jobs/{job_id}"
     response.headers["Location"] = location
 
@@ -71,10 +70,7 @@ async def get_job_status(job_id: str) -> JobResponse:
     job_response = job_manager.get_job_response(job_id)
 
     if not job_response:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
 
     return job_response
 

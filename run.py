@@ -21,6 +21,7 @@ Note:
 """
 
 import uvicorn
+
 from app.config import get_settings
 
 
@@ -32,7 +33,9 @@ def main() -> None:
     workers = 1 if settings.reload else settings.server_workers
 
     if settings.reload and settings.server_workers > 1:
-        print(f"[!] Note: reload=true, ignoring server_workers={settings.server_workers}, using 1 worker")
+        print(
+            f"[!] Note: reload=true, ignoring server_workers={settings.server_workers}, using 1 worker"
+        )
 
     print(f"Starting {settings.app_name} v{settings.app_version}")
     print(f"Server: http://{settings.host}:{settings.port}")
@@ -44,7 +47,7 @@ def main() -> None:
     print()
 
     uvicorn.run(
-        "app.main:app",
+        "app.main:server",
         host=settings.host,
         port=settings.port,
         reload=settings.reload,

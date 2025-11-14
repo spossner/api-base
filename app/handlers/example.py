@@ -30,17 +30,9 @@ async def process_data_handler(payload: dict[str, Any], context: JobContext) -> 
     logger.info(f"Starting data processing for {len(items)} items")
 
     # Step 1: Validation
-    context.add_result({
-        "step": "validation",
-        "status": "started",
-        "total_items": len(items)
-    })
+    context.add_result({"step": "validation", "status": "started", "total_items": len(items)})
     await asyncio.sleep(delay)
-    context.add_result({
-        "step": "validation",
-        "status": "completed",
-        "valid_items": len(items)
-    })
+    context.add_result({"step": "validation", "status": "completed", "valid_items": len(items)})
 
     # Step 2: Processing each item
     processed_items = []
@@ -50,17 +42,16 @@ async def process_data_handler(payload: dict[str, Any], context: JobContext) -> 
         processed_items.append(processed_item)
 
         # Report progress
-        context.add_result({
-            "step": "processing",
-            "progress": f"{i + 1}/{len(items)}",
-            "current_item": processed_item
-        })
+        context.add_result(
+            {
+                "step": "processing",
+                "progress": f"{i + 1}/{len(items)}",
+                "current_item": processed_item,
+            }
+        )
 
     # Step 3: Finalization
-    context.add_result({
-        "step": "finalization",
-        "status": "started"
-    })
+    context.add_result({"step": "finalization", "status": "started"})
     await asyncio.sleep(delay)
 
     # Return final result
@@ -68,7 +59,7 @@ async def process_data_handler(payload: dict[str, Any], context: JobContext) -> 
         "status": "success",
         "total_processed": len(processed_items),
         "items": processed_items,
-        "message": "All items processed successfully"
+        "message": "All items processed successfully",
     }
 
 
@@ -90,11 +81,7 @@ async def echo_handler(payload: dict[str, Any], context: JobContext) -> dict:
     context.add_result({"status": "processing", "message": "Echoing payload"})
     await asyncio.sleep(0.5)
 
-    return {
-        "status": "success",
-        "echoed_payload": payload,
-        "message": "Echo complete"
-    }
+    return {"status": "success", "echoed_payload": payload, "message": "Echo complete"}
 
 
 @register_handler("long_running")
@@ -117,12 +104,14 @@ async def long_running_handler(payload: dict[str, Any], context: JobContext) -> 
     logger.info(f"Starting long-running job: {duration}s across {stages} stages")
 
     for stage in range(1, stages + 1):
-        context.add_result({
-            "stage": stage,
-            "total_stages": stages,
-            "progress_percent": int((stage / stages) * 100),
-            "status": "running"
-        })
+        context.add_result(
+            {
+                "stage": stage,
+                "total_stages": stages,
+                "progress_percent": int((stage / stages) * 100),
+                "status": "running",
+            }
+        )
 
         await asyncio.sleep(stage_duration)
 
@@ -130,5 +119,5 @@ async def long_running_handler(payload: dict[str, Any], context: JobContext) -> 
         "status": "success",
         "duration": duration,
         "stages_completed": stages,
-        "message": "Long-running job completed"
+        "message": "Long-running job completed",
     }

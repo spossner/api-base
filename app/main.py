@@ -1,38 +1,43 @@
+import importlib
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from contextlib import asynccontextmanager
 
-from app.config import get_settings
 from app.api.v1.router import api_router
-from app.core.logging import setup_logging, logger
+from app.config import get_settings
+from app.core.logging import logger, setup_logging
 from app.jobs import job_manager, start_workers, stop_workers
+from app.middleware.request_logging import RequestLoggingMiddleware
 
 # Import handlers to register them
-import app.handlers
-from app.middleware.request_logging import RequestLoggingMiddleware  # noqa: F401
+importlib.import_module("app.handlers")
 
 settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     """Application lifespan events."""
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
 
-    # Start background workers
-    workers = await start_workers(settings.job_workers, job_manager)
-    logger.info(f"Started {settings.job_workers} background workers")
+    workers = None
+    if settings.job_workers > 0:
+        # Start background workers
+        workers = await start_workers(settings.job_workers, job_manager)
+        logger.info(f"Started {settings.job_workers} background workers")
 
     yield
 
     # Shutdown
     logger.info(f"Shutting down {settings.app_name}")
-    await stop_workers(workers)
-    logger.info("All background workers stopped")
+    if workers is not None:
+        await stop_workers(workers)
+        logger.info("All background workers stopped")
 
 
 def create_application() -> FastAPI:
@@ -50,9 +55,7 @@ def create_application() -> FastAPI:
     )
 
     # Middleware
-    app.add_middleware(
-        RequestLoggingMiddleware
-    )
+    app.add_middleware(RequestLoggingMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
@@ -66,34 +69,30 @@ def create_application() -> FastAPI:
 
     if not settings.debug:
         app.add_middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"]
+            TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"]
         )
-
-    # Routers
-    app.include_router(api_router, prefix=settings.api_v1_prefix)
 
     return app
 
 
-app = create_application()
+server = create_application()
+
+# main routes
+server.include_router(api_router, prefix=settings.api_v1_prefix)
 
 
-@app.get("/health")
+# health and check routes
+@server.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "app": settings.app_name,
-        "version": settings.app_version
-    }
+    return {"status": "healthy", "app": settings.app_name, "version": settings.app_version}
 
 
-@app.get("/")
+@server.get("/")
 async def root():
     """Root endpoint."""
     return {
         "message": f"Welcome to {settings.app_name}",
         "version": settings.app_version,
-        "docs": "/docs" if settings.debug else "disabled in production"
+        "docs": "/docs" if settings.debug else "disabled in production",
     }

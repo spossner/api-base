@@ -11,6 +11,16 @@ dist/
 
 # Unit test / coverage reports
 .pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Ruff cache
+.ruff_cache/
+
+# Mypy cache
+.mypy_cache/
 
 # Logs
 logs/
