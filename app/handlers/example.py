@@ -30,9 +30,13 @@ async def process_data_handler(payload: dict[str, Any], context: JobContext) -> 
     logger.info(f"Starting data processing for {len(items)} items")
 
     # Step 1: Validation
-    context.add_result({"step": "validation", "status": "started", "total_items": len(items)})
+    context.add_result(
+        {"step": "validation", "status": "started", "total_items": len(items)}
+    )
     await asyncio.sleep(delay)
-    context.add_result({"step": "validation", "status": "completed", "valid_items": len(items)})
+    context.add_result(
+        {"step": "validation", "status": "completed", "valid_items": len(items)}
+    )
 
     # Step 2: Processing each item
     processed_items = []

@@ -69,7 +69,8 @@ def create_application() -> FastAPI:
 
     if not settings.debug:
         app.add_middleware(
-            TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"]
+            TrustedHostMiddleware,
+            allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"],
         )
 
     return app
@@ -85,7 +86,11 @@ server.include_router(api_router, prefix=settings.api_v1_prefix)
 @server.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "app": settings.app_name, "version": settings.app_version}
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "version": settings.app_version,
+    }
 
 
 @server.get("/")

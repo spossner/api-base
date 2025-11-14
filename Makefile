@@ -1,4 +1,4 @@
-.PHONY: help dev debug prod install clean test lint format
+.PHONY: help dev debug prod install clean lint format check
 
 help:
 	@echo "Available commands:"
@@ -7,12 +7,13 @@ help:
 	@echo "  make prod     - Run in production mode (uses .env settings)"
 	@echo "  make install  - Install dependencies"
 	@echo "  make clean    - Clean up cache and temporary files"
-	@echo "  make lint     - Run code linting"
-	@echo "  make format   - Format code"
-	@echo "  make test     - Run tests"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  make format   - Auto-format code with ruff"
+	@echo "  make lint     - Lint code with ruff"
+	@echo "  make check    - Format + lint (run before commit)"
 	@echo ""
 	@echo "Configuration: Edit .env file to change settings"
-	@echo "All commands use run.py which reads from .env"
 
 dev:
 	@echo "Starting in development mode (reading from .env)..."
@@ -40,16 +41,13 @@ clean:
 	rm -rf .pytest_cache .coverage htmlcov/ dist/ build/ 2>/dev/null || true
 	@echo "Clean complete!"
 
-lint:
-	@echo "Running linters..."
-	@command -v ruff >/dev/null 2>&1 && ruff check app/ || echo "ruff not installed, skipping..."
-	@command -v pylint >/dev/null 2>&1 && pylint app/ || echo "pylint not installed, skipping..."
-
 format:
-	@echo "Formatting code..."
-	@command -v black >/dev/null 2>&1 && black app/ || echo "black not installed, skipping..."
-	@command -v ruff >/dev/null 2>&1 && ruff format app/ || echo "ruff not installed, skipping..."
+	@echo "Formatting code with ruff..."
+	ruff format app/ run.py
 
-test:
-	@echo "Running tests..."
-	@command -v pytest >/dev/null 2>&1 && pytest || echo "pytest not installed, run: pip install pytest"
+lint:
+	@echo "Linting code with ruff..."
+	ruff check app/ run.py --fix
+
+check: format lint
+	@echo "✅ Code formatted and linted!"

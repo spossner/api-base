@@ -81,7 +81,9 @@ async def worker_loop(worker_id: int, job_manager: JobManager) -> None:
         raise
 
 
-async def start_workers(worker_count: int, job_manager: JobManager) -> list[asyncio.Task]:
+async def start_workers(
+    worker_count: int, job_manager: JobManager
+) -> list[asyncio.Task]:
     """Start multiple worker tasks.
 
     Args:

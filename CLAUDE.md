@@ -17,7 +17,12 @@ make debug
 # Install dependencies
 make install
 
-# Clean cache files
+# Code Quality (using Ruff)
+make format    # Auto-format code
+make lint      # Lint and auto-fix issues
+make check     # Format + lint (run before commit)
+
+# Cleanup
 make clean
 ```
 
@@ -99,7 +104,8 @@ All job queue components are organized in `app/jobs/` for better separation of c
 ### Middleware & Lifecycle
 
 - Custom middleware organized in **app/middleware/**:
-  - request_logging.py - Logs requests and adds processing time headers
+  - request_logging.py - Logs requests with colored output and adds processing time headers
+  - utils.py - Color utilities for console logging (status/method colors)
 - Standard middleware (CORS, GZip, TrustedHost) configured in `create_application()`
 - Lifespan context manager in app/main.py:
   - **Startup**: Start worker pool via `start_workers()`
@@ -125,7 +131,7 @@ All job queue components are organized in `app/jobs/` for better separation of c
 1. Create handler file in `app/handlers/` (e.g., `my_handler.py`)
 2. Import dependencies:
    ```python
-   from app.jobs import JobContext, register_handler
+   from app.jobs.handlers import JobContext, register_handler
    from typing import Any
    ```
 3. Define handler with decorator:
@@ -160,6 +166,38 @@ All job queue components are organized in `app/jobs/` for better separation of c
    api_router.include_router(my_endpoint.router, prefix="/my-resource", tags=["my-resource"])
    ```
 
+## Code Quality
+
+This project uses **Ruff** for code formatting and linting.
+
+### What is Ruff?
+
+Ruff is an extremely fast Python linter and formatter written in Rust. It replaces Black, Flake8, isort, and more - all in one tool.
+
+### Usage
+
+```bash
+# Format code (like Black)
+make format
+
+# Lint and auto-fix issues (like Flake8 + isort)
+make lint
+
+# Do both
+make check
+```
+
+### Configuration
+
+Simple configuration in `pyproject.toml`:
+- Line length: 100 characters
+- Auto-fixes import sorting, code style issues
+- See `pyproject.toml` to customize rules
+
+### PyCharm Integration
+
+Install the **Ruff plugin** from PyCharm marketplace for automatic formatting on save.
+
 ## Development Notes
 
 ### Environment Setup
@@ -193,7 +231,8 @@ curl "http://localhost:8000/api/v1/jobs/{job_id}"
 
 - Configured in `app/core/logging.py`
 - Set `LOG_LEVEL` in .env (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- Logs to console and `logs/app.log` (created at runtime)
+- Logs to console with timestamps
+- Request logging includes colored status codes and processing times (via middleware)
 - Use `logger = logging.getLogger(__name__)` in modules
 
 ### Windows-Specific Notes

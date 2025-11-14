@@ -13,7 +13,9 @@ router = APIRouter()
 
 
 @router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
-async def submit_job(job_request: JobCreate, request: Request, response: Response) -> JobResponse:
+async def submit_job(
+    job_request: JobCreate, request: Request, response: Response
+) -> JobResponse:
     """Submit a new job for asynchronous processing.
 
     Args:
@@ -41,7 +43,8 @@ async def submit_job(job_request: JobCreate, request: Request, response: Respons
     job_response = job_manager.get_job_response(job_id)
     if not job_response:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create job"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create job",
         )
 
     # Set Location header pointing to the status endpoint
@@ -70,7 +73,9 @@ async def get_job_status(job_id: str) -> JobResponse:
     job_response = job_manager.get_job_response(job_id)
 
     if not job_response:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
+        )
 
     return job_response
 
