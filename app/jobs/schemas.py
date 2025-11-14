@@ -16,15 +16,11 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 
-class JobCreate(BaseModel):
-    """Schema for creating a new job."""
+# Base class for all job requests
+class BaseJobRequest(BaseModel):
+    """Base class for all job request types."""
 
-    type: str = Field(
-        ..., description="The type of job to execute (must match a registered handler)"
-    )
-    payload: dict[str, Any] = Field(
-        default_factory=dict, description="Job-specific data passed to the handler"
-    )
+    type: str = Field(..., description="The type of job to execute")
 
 
 class IntermediateResult(BaseModel):

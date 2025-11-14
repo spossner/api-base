@@ -4,8 +4,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.jobs import JobCreate, JobResponse, job_manager, list_handlers
+from app.jobs import JobResponse, job_manager, list_handlers
 from app.jobs.registry import can_handle
+from app.jobs.request_union import JobRequest
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +15,17 @@ router = APIRouter()
 
 @router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def submit_job(
-    job_request: JobCreate, request: Request, response: Response
+    job_request: JobRequest, request: Request, response: Response
 ) -> JobResponse:
     """Submit a new job for asynchronous processing.
 
+    Accepts typed job requests with discriminated union based on 'type' field:
+    - DataProcessingRequest: type="data_processing"
+    - EchoRequest: type="echo"
+    - LongRunningRequest: type="long_running"
+
     Args:
-        job_request: Job creation request
+        job_request: Typed job creation request
         request: FastAPI request object (for building Location URL)
         response: FastAPI response object (for setting headers)
 
@@ -36,8 +42,11 @@ async def submit_job(
             detail=f"Unknown job type: {job_request.type}.",
         )
 
+    # Convert typed request to dict, excluding the 'type' field
+    payload = job_request.model_dump(exclude={"type"})
+
     # Submit job
-    job_id = await job_manager.submit_job(job_request.type, job_request.payload)
+    job_id = await job_manager.submit_job(job_request.type, payload)
 
     # Get job response
     job_response = job_manager.get_job_response(job_id)

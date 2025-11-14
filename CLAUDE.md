@@ -75,13 +75,15 @@ All job queue components are organized in `app/jobs/` for better separation of c
 
 #### Data Flow
 
-1. API endpoint receives POST /api/v1/jobs with `type` and `payload`
-2. JobManager creates Job object, stores in `_jobs`, adds ID to `_queue`
-3. Worker calls `get_next_job()` (blocks until job available)
-4. Worker retrieves Job from `_jobs`, executes handler with JobContext
-5. Handler calls `context.add_result()` throughout processing
-6. Final result stored, status updated to COMPLETED/FAILED
-7. Client polls GET /api/v1/jobs/{job_id} to see intermediate results and final result
+1. API endpoint receives POST /api/v1/jobs with typed request (e.g., `EchoRequest`)
+2. Pydantic validates request using discriminated union based on `type` field
+3. JobManager creates Job object, stores in `_jobs`, adds ID to `_queue`
+4. Worker calls `get_next_job()` (blocks until job available)
+5. Worker retrieves Job from `_jobs`, executes handler with JobContext
+6. Handler validates payload into typed request model for type safety
+7. Handler calls `context.add_result()` throughout processing
+8. Final result stored, status updated to COMPLETED/FAILED
+9. Client polls GET /api/v1/jobs/{job_id} to see intermediate results and final result
 
 #### Worker Configuration
 
@@ -128,34 +130,97 @@ All job queue components are organized in `app/jobs/` for better separation of c
 
 ### Adding a New Job Handler
 
-1. Create handler file in `app/handlers/` (e.g., `my_handler.py`)
-2. Import dependencies:
-   ```python
-   from app.jobs.registry import  register_handler
-from app.jobs import JobContext
-   from typing import Any
-   ```
-3. Define handler with decorator:
-   ```python
-   @register_handler("my_job_type")
-   async def my_handler(payload: dict[str, Any], context: JobContext) -> dict:
-       # Access payload data
-       data = payload.get("key")
+The job system uses **Pydantic models** for type-safe request validation. Each handler is self-contained in its own module with both the request schema and handler function.
 
-       # Add intermediate results (optional, can be called multiple times)
-       context.add_result({"status": "started"})
+#### Structure
 
-       # Do processing
-       result = await process_something(data)
+Create a new file `app/handlers/my_handler.py`:
 
-       # Return final result
-       return {"status": "success", "result": result}
-   ```
-4. Import in `app/handlers/__init__.py`:
-   ```python
-   from app.handlers import my_handler
-   ```
-5. Handler is now available - submit jobs with `"type": "my_job_type"`
+```python
+"""My custom job handler and request schema."""
+
+import logging
+from typing import Any, Literal
+
+from pydantic import Field
+
+from app.jobs import JobContext, register_handler
+from app.jobs.schemas import BaseJobRequest
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Request Schema
+# ============================================================================
+
+
+class MyJobRequest(BaseJobRequest):
+    """Request for my custom job."""
+
+    type: Literal["my_job_type"] = "my_job_type"
+    input_data: str = Field(..., description="Input data to process")
+    options: dict[str, str] = Field(default_factory=dict)
+
+
+# ============================================================================
+# Handler
+# ============================================================================
+
+
+@register_handler("my_job_type")
+async def my_handler(payload: dict[str, Any], context: JobContext) -> dict:
+    """Process my custom job.
+
+    Args:
+        payload: Raw payload dict (will be validated into MyJobRequest)
+        context: Job context for adding intermediate results
+
+    Returns:
+        Final processing result
+    """
+    # Validate payload into typed request
+    data = MyJobRequest(**payload)
+
+    # Type-safe access to fields
+    input_data = data.input_data
+    options = data.options
+
+    # Add intermediate results (optional)
+    context.add_result({"status": "started"})
+
+    # Do processing
+    result = await process_something(input_data, options)
+
+    # Return final result
+    return {"status": "success", "result": result}
+```
+
+#### Register the Handler
+
+Import in `app/handlers/__init__.py`:
+
+```python
+from app.handlers import data_processing, echo, long_running, my_handler
+
+__all__ = ["data_processing", "echo", "long_running", "my_handler"]
+```
+
+That's it! The request type is **automatically discovered** and added to the discriminated union. No need to manually update the union.
+
+#### Use It
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "my_job_type",
+    "input_data": "hello",
+    "options": {"mode": "fast"}
+  }'
+```
+
+The system automatically validates the request based on the `type` field!
 
 ### Adding a New API Endpoint
 
@@ -220,7 +285,7 @@ Submit via:
 ```bash
 curl -X POST "http://localhost:8000/api/v1/jobs" \
   -H "Content-Type: application/json" \
-  -d '{"type": "echo", "payload": {"message": "test"}}'
+  -d '{"type": "echo", "message": "test"}'
 ```
 
 Poll status via Location header or:

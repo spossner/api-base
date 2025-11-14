@@ -3,6 +3,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class JobContext:
     """Context object passed to handlers for updating job state."""
 
