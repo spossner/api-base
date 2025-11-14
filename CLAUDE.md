@@ -131,7 +131,8 @@ All job queue components are organized in `app/jobs/` for better separation of c
 1. Create handler file in `app/handlers/` (e.g., `my_handler.py`)
 2. Import dependencies:
    ```python
-   from app.jobs.handlers import JobContext, register_handler
+   from app.jobs.registry import  register_handler
+from app.jobs import JobContext
    from typing import Any
    ```
 3. Define handler with decorator:

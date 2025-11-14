@@ -3,7 +3,8 @@
 import asyncio
 import logging
 
-from app.jobs.handlers import JobContext, get_handler
+from app.jobs.registry import get_handler
+from app.jobs.base import JobContext
 from app.jobs.manager import JobManager
 from app.jobs.schemas import JobStatus
 
