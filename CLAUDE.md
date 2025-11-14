@@ -93,6 +93,20 @@ All job queue components are organized in `app/jobs/` for better separation of c
 - Each Uvicorn process has its own JobManager instance (not shared across processes)
 - For production with multiple processes, consider external queue (Redis, RabbitMQ)
 
+#### Automatic Job Cleanup
+
+To prevent memory leaks, completed/failed jobs are automatically cleaned up:
+
+- `JOB_RETENTION_SECONDS` - How long to keep completed jobs (default: 3600s = 1 hour)
+- `JOB_CLEANUP_INTERVAL_SECONDS` - How often to run cleanup (default: 300s = 5 minutes)
+
+Background cleanup task runs periodically and removes:
+- ✅ Completed jobs older than retention period
+- ✅ Failed jobs older than retention period
+- ❌ Never removes pending or running jobs
+
+**Note:** Clients should poll job results within the retention window. After cleanup, job results are no longer available.
+
 ### API Structure
 
 - API versioning: all endpoints under `/api/v1/` prefix

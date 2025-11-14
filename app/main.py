@@ -9,7 +9,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.core.logging import logger, setup_logging
-from app.jobs import job_manager, start_workers, stop_workers
+from app.jobs import job_manager, start_workers, stop_workers, list_handlers
+from app.jobs.cleanup import start_cleanup_task, stop_cleanup_task
 from app.middleware.request_logging import RequestLoggingMiddleware
 
 # Import handlers to register them
@@ -26,15 +27,33 @@ async def lifespan(_: FastAPI):
     logger.info(f"Debug mode: {settings.debug}")
 
     workers = None
+    cleanup_task = None
+
     if settings.job_workers > 0:
-        # Start background workers
-        workers = await start_workers(settings.job_workers, job_manager)
-        logger.info(f"Started {settings.job_workers} background workers")
+        handlers = list_handlers()
+        if len(handlers) == 0:
+            logger.info("no registered handlers")
+        else:
+            logger.info(f"Registered handlers: {handlers}")
+
+            # Start background workers
+            workers = await start_workers(settings.job_workers, job_manager)
+
+            # Start cleanup task
+            cleanup_task = await start_cleanup_task(
+                job_manager,
+                settings.job_retention_seconds,
+                settings.job_cleanup_interval_seconds,
+            )
 
     yield
 
     # Shutdown
     logger.info(f"Shutting down {settings.app_name}")
+
+    if cleanup_task is not None:
+        await stop_cleanup_task(cleanup_task)
+
     if workers is not None:
         await stop_workers(workers)
         logger.info("All background workers stopped")

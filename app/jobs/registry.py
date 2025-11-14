@@ -31,8 +31,6 @@ def register_handler(job_type: str) -> Callable:
             return {"sent": True, "message_id": "123"}
     """
 
-    print(f"registering handler for {job_type}")
-
     def decorator(func: Callable) -> Callable:
         _registry[job_type] = func
         logger.info(f"Registered handler for job type: {job_type}")

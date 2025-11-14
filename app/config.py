@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # Job Queue
     job_workers: int = 10  # Background async job queue workers
+    job_retention_seconds: int = 3600  # Keep completed jobs for 1 hour (3600s)
+    job_cleanup_interval_seconds: int = 300  # Run cleanup every 5 minutes (300s)
 
     # Logging
     log_level: str = "INFO"

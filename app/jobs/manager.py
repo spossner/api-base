@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.core.utils import create_id
@@ -184,6 +184,51 @@ class JobManager:
             Total number of jobs
         """
         return len(self._jobs)
+
+    def cleanup_old_jobs(self, retention_seconds: int) -> int:
+        """Remove completed/failed jobs older than retention period.
+
+        Args:
+            retention_seconds: How long to keep completed jobs (in seconds)
+
+        Returns:
+            Number of jobs removed
+        """
+        cutoff_time = datetime.now() - timedelta(seconds=retention_seconds)
+        jobs_to_remove = []
+
+        for job_id, job in self._jobs.items():
+            # Only cleanup completed or failed jobs
+            if job.status not in (JobStatus.COMPLETED, JobStatus.FAILED):
+                continue
+
+            # Check if job is old enough to remove
+            if job.completed_at and job.completed_at < cutoff_time:
+                jobs_to_remove.append(job_id)
+
+        # Remove old jobs
+        for job_id in jobs_to_remove:
+            del self._jobs[job_id]
+            logger.debug(f"Cleaned up old job: {job_id}")
+
+        if jobs_to_remove:
+            logger.info(
+                f"Cleaned up {len(jobs_to_remove)} old jobs "
+                f"(retention: {retention_seconds}s)"
+            )
+
+        return len(jobs_to_remove)
+
+    def get_job_count_by_status(self, status: JobStatus) -> int:
+        """Count jobs with a specific status.
+
+        Args:
+            status: Job status to count
+
+        Returns:
+            Number of jobs with the given status
+        """
+        return sum(1 for job in self._jobs.values() if job.status == status)
 
 
 # Global job manager instance
